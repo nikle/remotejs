@@ -1,0 +1,99 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+    <title id='Description'>remotejs</title>
+    <link rel="stylesheet" href="public/css/jqx.base.css" type="text/css" />
+    <script type="text/javascript" src="public/js/jquery-1.11.0.min.js"></script>
+    <script type="text/javascript" src="public/js/demos.js"></script>
+    <script type="text/javascript" src="public/js/jqxcore.js"></script>
+	<script type="text/javascript" src="public/js/jqxtooltip.js"></script>
+    <script type="text/javascript" src="public/js/jqxdata.js"></script>
+    <script type="text/javascript" src="public/js/jqxtreemap.js"></script>
+</head>
+<body>
+    <div id='content'>
+        <script type="text/javascript">
+            $(document).ready(function () {
+				dataSource = [];
+							
+				$.getJSON( "treemap/data.json", function( data ) {
+					$.each( data, function( key, val ) {
+						$.each( val, function( i, v ) {
+							var row = {};
+							row["label"] = v["label"];
+							row["value"] = v["value"];
+							row["parent"] = v["parent"];
+							row["data"] = v["data"];
+							dataSource.push(row);
+						});
+					});
+
+					var width = $('#content').width() * 0.9;
+					$('#treemap').jqxTreeMap({
+						width: width,
+						height: 600,
+						source: dataSource,
+						renderCallbacks: {
+							'*': function (element, value) {
+								if(value.parent == null) {
+									element.css({
+										backgroundColor: '#fff',
+										border: '1px solid #555'
+									});
+								} else {
+									if(value.data.result == "passed") {
+										element.css({
+											backgroundColor: '#95FF7A',
+											border: '1px solid #555'
+										});
+									} else {
+										element.css({
+											backgroundColor: '#FF797b',
+											border: '1px solid #555'
+										});
+									}
+									element.jqxTooltip({
+										content: '<div><div style="font-weight: bold; max-width: 200px; font-family: verdana; font-size: 13px;">' 
+											+ "Machine: " + value.data.machineName + '</div>'
+											+ '<div style="font-weight: bold; font-family: verdana; font-size: 13px;">Version: ' + value.data.codeVersion + '</div>'
+											+ '<div style="font-weight: bold; font-family: verdana; font-size: 13px;">Duration: ' + value.data.duration + '</div>'
+											+ '<a href="/?logid=' + value.label + '" target="_blank">' + "Click me" + '</a></div>',
+										position: 'mouse',
+										autoHideDelay: 6000,
+										theme: theme
+									});
+									
+									if(value.data.latest == 1) {
+										var i = 0;
+										times = 10;
+										var t = setInterval(function(){
+											i++;
+											if(i % 2 == 0) {
+												element.css({
+													border: '1px solid #555'
+												});
+											} else {
+												element.css({
+													border: '2px solid #000000'
+												});
+											}
+											if(i == 2 * times) {
+												clearInterval(t);
+											}
+										}, 200);
+									}
+
+								}
+							}
+						}
+					});	
+					$(".jqx-treemap-rectangle-parent .jqx-treemap-rectangle .jqx-treemap-label").html("");
+				});
+            });
+        </script>
+        <div id='treemap' style="margin:0 auto;">
+        </div>
+    </div>
+</body>
+</html>

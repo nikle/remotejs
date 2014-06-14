@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html ng-app="myApp">
+
+<head lang="en">
+<meta charset="utf-8">
+<title>WebCare UI</title>
+<link rel="stylesheet" type="text/css" href="public/css/ng-grid.css" />
+<link rel="stylesheet" type="text/css" href="public/css/style.css" />
+<link rel="stylesheet" type="text/css" href="public/css/bootstrap.css">
+<script
+	src="public/js/jquery.min.js"></script>
+<script
+	src="public/js/angular.min.js"></script>
+<script type="text/javascript"
+	src="public/js/ng-grid-2.0.7.debug.js"></script>
+<script type="text/javascript" src="public/js/dashboard.js"></script>
+
+</head>
+
+<body>
+	<div ng-controller="RecordingCtrl">
+		<h2>Exceptional Client Recordings List</h2>
+		<div class="gridStyle" ng-grid="gridOptions_recording"></div>
+		<p></p>
+
+		<form class="form-inline" role="form">
+			<div class="form-group">
+				<label class="control-label">Available code versions: </label>
+			</div>
+			<div class="form-group">
+				<select class="form-control" ng-model="codeVersion"
+					ng-options="c.version for c in codeVersions">
+					<option value="">-- choose code version --</option>
+				</select>
+			</div>
+			<div class="form-group">
+			    <select class="form-control" ng-model="targetMachine"
+					ng-options="c.machine for c in targetMachines">
+					<option value="">-- choose target machine --</option>
+				</select>
+			</div>
+			<button type="submit" class="btn btn-default" ng-click="toReplay()">Add
+				to Replay List</button>
+		</form>
+	</div>
+
+	<br />
+	<br />
+	<div ng-controller="ReplayCtrl">
+	<h2>Replaying History</h2>
+	<div class="gridStyle" ng-grid="gridOptions_replay"></div>
+	</div>
+
+</body>
+
+</html>
