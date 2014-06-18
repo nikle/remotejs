@@ -7,10 +7,10 @@ var _clematisReplacementDescriptors= {};
 var alreadyOverwritten = {};
 
 
-document.addEventListener("DOMContentLoaded",function replaceDOMLevel1ForAll(){
+window.origAddEventListener.call(document,"DOMContentLoaded",function replaceDOMLevel1ForAll(){
     var allElements = document.querySelectorAll("*");
 
-    this.removeEventListener("DOMContentLoaded",replaceDOMLevel1ForAll,false);
+    window.origRemoveEventListener.call(document,"DOMContentLoaded",replaceDOMLevel1ForAll,false);
 
     for(var i =0; i<allElements.length; ++i){
         overrideDOMLevel1Event(allElements[i]);
@@ -81,35 +81,11 @@ function generateReplacementLevel1Event(level1Event){
         },
         set: function(arg0){
 
-            if(this.id === "l24" && level1Event === "_clematisonmouseout"){
-                console.log("testing !!!!!");
-            }
-
-            if(this.id === "l24" && level1Event === "_clematisonmouseover"){
-                console.log("testing !!!!!");
-            }
-
-            if(this.id === "l24" && level1Event === "_clematisonclick"){
-                console.log("testing !!!!!!!!!!!");
-            }
-
-             if(this.id === "l35" && level1Event === "_clematisonmouseout"){
-                console.log("testing !!!!!");
-            }
-
-            if(this.id === "l35" && level1Event === "_clematisonmouseover"){
-                console.log("testing !!!!!");
-            }
-
-            if(this.id === "l35" && level1Event === "_clematisonclick"){
-                console.log("testing !!!!!!!!!!!");
-            }
-
-            if(typeof this[level1Event] != "undefined"){
+            if(this[level1Event]){
                 this.removeEventListener(eventType,this[level1Event],false);
             }         
             if(Object.prototype.toString.apply(arg0)=="[object Function]" ){
-                arg0 = this.addEventListener(eventType,arg0,false);
+                this.addEventListener(eventType,arg0,false);
             }
 
             Object.defineProperty(this,level1Event,{

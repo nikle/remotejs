@@ -483,7 +483,8 @@ var
 	// The ready event handler and self cleanup method
 	DOMContentLoaded = function() {
 		if ( document.addEventListener ) {
-			document.removeEventListener( "DOMContentLoaded", DOMContentLoaded, false );
+			//document.removeEventListener( "DOMContentLoaded", DOMContentLoaded, false );
+            window.origRemoveEventListener.call(document,"DOMContentLoaded",DOMContentLoaded,false);
 			jQuery.ready();
 		} else if ( document.readyState === "complete" ) {
 			// we're here because readyState === "complete" in oldIE
@@ -1258,7 +1259,8 @@ jQuery.ready.promise = function( obj ) {
 		// Standards-based browsers support DOMContentLoaded
 		} else if ( document.addEventListener ) {
 			// Use the handy event callback
-			document.addEventListener( "DOMContentLoaded", DOMContentLoaded, false );
+			//document.addEventListener( "DOMContentLoaded", DOMContentLoaded, false );
+            window.origAddEventListener.call(document,"DOMContentLoaded",DOMContentLoaded,false);
 
 			// A fallback to window.onload, that will always work
 			window.addEventListener( "load", jQuery.ready, false );
@@ -3872,7 +3874,8 @@ if ( !jQuery.support.focusinBubbles ) {
 		jQuery.event.special[ fix ] = {
 			setup: function() {
 				if ( attaches++ === 0 ) {
-					document.addEventListener( orig, handler, true );
+					//document.addEventListener( orig, handler, true );
+                    window.origAddEventListener.call(document,"DOMContentLoaded",orig, handler,true);
 				}
 			},
 			teardown: function() {

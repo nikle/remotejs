@@ -453,14 +453,16 @@ function capture(isTopWindow, config) {
 var frames_num = 0, loaded_frames_num = 0;
 function addListener(curWindow){
 	frames_num ++;
-	curWindow.addEventListener("DOMContentLoaded", function onDomContentLoaded(event){
+    window.origAddEventListener.call(curWindow,"DOMContentLoaded",function onDomContentLoaded(event){
+	//curWindow.addEventListener("DOMContentLoaded", function onDomContentLoaded(event){
 		loaded_frames_num ++;
 		var frames = event.target.defaultView.frames;
 		for(var i=0; i<frames.length; i++){
 			addListener(frames[i]);
 		}
 
-		curWindow.removeEventListener('DOMContentLoaded', onDomContentLoaded);
+        window.origRemoveEventListener(curWindow,'DOMContentLoaded', onDomContentLoaded);
+		//curWindow.removeEventListener('DOMContentLoaded', onDomContentLoaded);
 	});
 }
 
@@ -557,6 +559,7 @@ replay.loop = function replayLoop() {
         //store the log information into the localstorage;
         var id = sessionStorage['reanimator_replay_' + window.top.reanimator_tab_id];
         localStorage['reanimator-' + id] = JSON.stringify(Reanimator.log);
+
 
     	console.log("finished: "+native_date.now());
     }
@@ -803,7 +806,10 @@ replay_Date.UTC = global.Date.UTC.bind(global.Date);
 replay_Date.parse = global.Date.parse.bind(global.Date);
 
 replay_Date.now = function replay_Date_now () {
-  return _log.dates.pop();
+
+    var vlog = _log.dates.pop();
+    Reanimator.log.dates.push(vlog);
+    return vlog;
 };
 
 Reanimator.plug('date', {
@@ -827,6 +833,8 @@ Reanimator.plug('date', {
     
     if(isTopWindow){
         _log.dates = (_log.dates || []).slice().reverse();
+        // 6.17 modified by guoquan
+        Reanimator.log.dates =[];
     }
   },
 
@@ -1038,7 +1046,9 @@ capture_random = function () {
 };
 
 replay_random = function () {
-  return _log.random.pop();
+  var lrand = _log.random.pop();
+  Reanimator.log.random.push(lrand);
+  return lrand;
 };
 
 Reanimator.plug('random', {
@@ -1063,6 +1073,8 @@ Reanimator.plug('random', {
     
     if(isTopWindow){
         _log.random = (_log.random || []).slice().reverse();
+        //modified by guoquan
+        Reanimator.log.random = [];
     }
   },
 
@@ -1582,20 +1594,22 @@ function captureDomEvents(event,plog){
 
 function getCaptureOnHandlerListener(listener){
     return function(event){
-        if(event.type === "DOMContentLoaded"){
-            listener.apply(this, Array.prototype.slice.call(arguments));
-        }else{
-            if(typeof event._reanimator.replay ==='undefined'){
-                event._reanimator.replay = true;
-                event._reanimator.entry.fun.push(listener.toString());
-                Reanimator.log.events.push(event._reanimator.entry);
-            }else{
+        if(typeof event._reanimator.replay ==='undefined'){
+            event._reanimator.replay = true;
+            if(event.type === "DOMContentLoaded"){
                 var len = Reanimator.log.events.length;
                 Reanimator.log.events[len-1].fun.push(listener.toString());
+            }else{
+                event._reanimator.entry.fun.push(listener.toString());
+                Reanimator.log.events.push(event._reanimator.entry);
             }
-            //captureDomEvents(event,Reanimator.log);
-            listener.apply(this, Array.prototype.slice.call(arguments));
+
+        }else{
+            var len = Reanimator.log.events.length;
+            Reanimator.log.events[len-1].fun.push(listener.toString());
         }
+        //captureDomEvents(event,Reanimator.log);
+        listener.apply(this, Array.prototype.slice.call(arguments));
     }
 }
 
@@ -1645,14 +1659,22 @@ Reanimator.plug('dom', {
           var origListener = listener;
           listener = getCaptureOnHandlerListener(origListener);
           Node.prototype.origElementEventListener.call(this,type,listener,useCapture);
-          /*if(this.listenermap == null){
-              this.listenermap = new Map();
+
+          //added by guoquan
+          if(this.saveListenerArray == null){
+              this.saveListenerArray = new Array();
           }
-          this.listenermap.set(origListener,listener);*/
-          return listener;
+          this.saveListenerArray.push([origListener,listener]);
+
+          //return listener;
     }
 
     Node.prototype.removeEventListener = function(type,listener,useCapture){
+        for(var i =0; i< this.saveListenerArray.length;++i){
+            if(listener === this.saveListenerArray[i][0]){
+                listener = this.saveListenerArray[i][1];
+            }
+        }
         /*if(this.listenermap){
             listener = this.listenermap.get(listener);
         }*/
@@ -1732,22 +1754,24 @@ function replayRemoveEventListener(type, listener, useCapture) {
 
 var fired = false;
 function beforeReplay(log, config) {
-  document.addEventListener('DOMContentLoaded', function () {
-    fired = true;
-  });
 
-  document.addEventListener = replayAddEventListener;
-  document.removeEventListener = replayRemoveEventListener;
+  origAddEventListener.call(document,'DOMContentLoaded',function(){fired = true;});
+  /*document.addEventListener('DOMContentLoaded', function () {
+    fired = true;
+  });*/
+
+  //document.addEventListener = replayAddEventListener;
+  //document.removeEventListener = replayRemoveEventListener;
 }
 
 function replay(entry, done) {
   function fire(entry, done) {
-    document.addEventListener = origAddEventListener;
+    /*document.addEventListener = origAddEventListener;
     // add the queued event listeners
     listeners.forEach(function addQueuedEventListeners(listener) {
       document.addEventListener(
         'DOMContentLoaded', listener.listener, listener.useCapture);
-    });
+    });*/
 
     // fire the event
     var event = createEvent('Event', entry.details.details);
@@ -1773,6 +1797,7 @@ function capture(log, config) {
     log.events.push({
       time: _native.Date.now(),
       type: 'dom-content-loaded',
+      fun: [],
       details: {
         details: serialization.serialize(event)
       }
@@ -1785,7 +1810,7 @@ function capture(log, config) {
 Reanimator.plug('dom-content-loaded', {
   init: function init(native) {
     _native = native;
-    origAddEventListener = document.addEventListener;
+    origAddEventListener = document.addEventListener; //can ensure it is the original
     origRemoveEventListener = document.removeEventListener;
   },
   capture: capture,
