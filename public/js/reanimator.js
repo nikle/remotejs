@@ -734,7 +734,11 @@ function _Date(replaying, year, month, day, hours, minutes, seconds, ms) {
         //_log.dates.push(_native.Date.parse(date));
         _log.dates.push(date.getTime());
       } else {
-        this._value = new _native.Date(_log.dates.pop());
+
+        //modified by guoquan
+        var vDate = _log.dates.pop();
+        this._value = new _native.Date(vDate);
+        Reanimator.log.dates.push(vDate);
       }
     } else if (argsLen === 2) {
       this._value = new _native.Date(year);
@@ -763,7 +767,10 @@ function _Date(replaying, year, month, day, hours, minutes, seconds, ms) {
       //_log.dates.push(_native.Date.parse(date));
       _log.dates.push(date.getTime());
     } else {
-      date = (new _native.Date(_log.dates.pop())).toString();
+      //modified by guoquan
+        var vsDate = _log.dates.pop();
+        date = (new _native.Date(vsDate)).toString();
+        Reanimator.log.dates.push(vsDate);
     }
 
     return date;
@@ -2288,6 +2295,7 @@ iface.prototype.properties.forEach(function (name) {
   XMLHttpRequest_capture.prototype[name] = XMLHttpRequest[name];
 });
 
+
 function getMethodWrapper(name) {
   return function () {
     var args = Array.prototype.slice.call(arguments);
@@ -2298,9 +2306,13 @@ function getMethodWrapper(name) {
 
     try {
       result = this._value[name].apply(this._value, args);
+        //modified by guoquan
+       var funName = name+"("+args.join()+")";
       _log.xhr.instances[this._reanimator.id][name].push({
         type: 'result',
+        //fun: funName,
         value: result
+
       });
 
       return result;
@@ -2338,7 +2350,22 @@ var statusTextDescriptor = {
   };
 
 function XMLHttpRequest_replay() {
-  this._reanimator = _log.xhr.instances.pop();
+    //modified by guoquan
+    var instance_xhr = {};
+    var k;
+    this._reanimator =  _log.xhr.instances.pop();
+    for(k in this._reanimator){
+        if(this._reanimator[k] instanceof Array){
+            instance_xhr[k]=[];
+        }
+    }
+    instance_xhr.id = this._reanimator.id;
+    Reanimator.log.xhr.instances.push(instance_xhr);
+
+   //modified by guoquan
+    //Reanimator.log.xhr.instances.push(JSON.parse(JSON.stringify(instance_xhr)));
+
+
   Object.keys(this._reanimator).forEach(function (k) {
     if (this._reanimator[k] instanceof Array) {
       this._reanimator[k] = this._reanimator[k].reverse();
@@ -2378,6 +2405,9 @@ function XMLHttpRequest_replay() {
         enumerable: true,
         get: function () {
           var result = this._reanimator[name].pop();
+           //modified by guoquan
+           instance_xhr[name].push(result);
+
           var error;
 
           if (result.type === 'error') {
@@ -2407,7 +2437,18 @@ function XMLHttpRequest_replay() {
 });
 
 function replayMethodOrProperty(name) {
+  // Note: modified by guoquan
+  // from this function we can get the arguments
+
+  //not sure whether this function will be invoked
+  var len = Reanimator.log.xhr.instances.length;
+  var xhr_ins= Reanimator.log.xhr.instances[len-1];
+
+
   var result = this._reanimator[name].pop();
+
+  xhr_ins[name].push(result);
+
   var error;
 
   if (result.type === 'error') {
@@ -2483,13 +2524,30 @@ Reanimator.plug('xhr', {
     	      iface: iface,
     	      instances: []
     	    };
+        //modified by guoquan
+        Reanimator.log.xhr.iface = iface;
+        Reanimator.log.instance = [];
+
     	    _log.xhr.instances = (_log.xhr.instances || []).slice().reverse();
     	    var prototype = {};
 
     	    _log.xhr.iface.prototype.methods.forEach(function (name) {
     	      if (!(name in synthetic.EventTarget.prototype)) {
     	        prototype[name] = function replayMethodOrProperty() {
-    	          var result = this._reanimator[name].pop();
+
+                  // Note by guoquan
+                  // From this function we can get the argument of the function
+                    var len = Reanimator.log.xhr.instances.length;
+                    var xhr_inst = Reanimator.log.xhr.instances[len-1];
+                    var args = Array.prototype.slice.call(arguments);
+                    //modified by guoquan
+                    var funName = name+"("+args.join()+")";
+
+    	            var result = this._reanimator[name].pop();
+
+                    result.fun = funName;
+                    xhr_inst[name].push(result);
+
     	          var error;
 
     	          if (result.type === 'error') {
