@@ -62,10 +62,6 @@ var nativeSetInterval = setInterval;
 var nativeXMLHttpRequest = XMLHttpRequest;
 
 (function() {	
-	var REPLAY_TOKEN = 'replay=';
-
-	var query = window.top.location.search;
-
 	var replay_session_token = 'reanimator_replay_' + window.top.reanimator_tab_id;
 	var capture_session_token = 'reanimator_capture_' + window.top.reanimator_tab_id;
 	var isTopWindow = checkTopMostWindow();
@@ -96,7 +92,7 @@ var nativeXMLHttpRequest = XMLHttpRequest;
 		}
 	}
 
-	var flag = true;
+	/*var flag = true;
 	// Record sequence id (which page is loaded) in session
 	$(window.top).on('beforeunload', function(e) {
 		//console.log(document.cookie);
@@ -104,7 +100,8 @@ var nativeXMLHttpRequest = XMLHttpRequest;
 		flag = false;
 		unloading();
 		return null;
-	});
+	});*/
+
 
 	/*$(window.top).on('unload', function(e) {
 		//console.log(document.cookie);
@@ -115,30 +112,38 @@ var nativeXMLHttpRequest = XMLHttpRequest;
 		}		
 	});*/
 
-	if (query.indexOf(REPLAY_TOKEN) >= 0 || sessionStorage.getItem(replay_session_token) != null) {
+	if (typeof window.remotejs_replay_id != 'undefined' || sessionStorage.getItem(replay_session_token) != null) {
 		
 		if(isTopWindow){
 
 			// Get recordings from database if it is the topmost window
-			if(query.indexOf(REPLAY_TOKEN) >= 0 && sessionStorage.getItem(replay_session_token) === null){
+			if(typeof window.remotejs_replay_id != 'undefined' && sessionStorage.getItem(replay_session_token) === null){
 				// First time to launch an app, record the replay id in the session
 				deleteCookie("captureid");
 				deleteCookie("replayid");
-				//window.top.location="http://localhost:8888/roundcube/";
-				query = query.split(REPLAY_TOKEN);
-				id = query[1];
-				setCookie('replayid',id);
-				sessionStorage[replay_session_token] = id;
+
+                /*if(query.indexOf('&event=') <0){
+                    query = query.split(REPLAY_TOKEN);
+                    id = query[1];
+                }else{
+
+                    id = query.substring(8,query.indexOf('&event='));
+                    console.log(id);
+                    window.eventID = query.substring(query.indexOf('&event=')+7);
+                    console.log(window.eventID);
+                }*/
+
+				setCookie('replayid',window.remotejs_replay_id);
+				sessionStorage[replay_session_token] = window.remotejs_replay_id;
 				sessionStorage[replay_session_token + '_seq'] = 0;
 
-				//var stateObject = {};
-				//var title = "Wow Title";
-				//var newUrl = "http://localhost:8888/roundcube/";
-				//history.pushState(stateObject,title,newUrl);
-				
 			}
 			
-			id = sessionStorage[replay_session_token];
+			var id = sessionStorage[replay_session_token];
+            /*if(query.indexOf('&event=')>=0){
+                window.eventID = query.substring(query.indexOf('&event=')+7);
+            }*/
+
 			seq = sessionStorage[replay_session_token + '_seq'];
 			var xhr = new nativeXMLHttpRequest();
 			xhr.open('GET', getUrl + "?id=" + id + "&seq=" + seq, false);
@@ -162,6 +167,7 @@ var nativeXMLHttpRequest = XMLHttpRequest;
 			Reanimator.replay(window.top.Reanimator.state.log, {delay: 'realtime'}, isTopWindow);
 		}
 	} else {
+		// refactor has no impact on capture phase;
 		// If topmost window, start a new id and capture. Update to server periodically
 		if(isTopWindow){
 			if (sessionStorage.getItem(capture_session_token) === null) {
